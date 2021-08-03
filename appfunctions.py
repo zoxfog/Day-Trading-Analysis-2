@@ -322,44 +322,92 @@ def graphViz (data,period = "Time",volume_period = 9, start=None, end=None, poin
     fig.show()
 
 
-def regPlot(col,data):
-    
-    fig,ax = plt.subplots(1,4 ,figsize = (20,7))
-    fig.subplots_adjust(wspace=0.3)
-    fig.suptitle(col,fontsize = 22)
-
-
-    ax[0] = sns.regplot(x=col, y="Exit R", data=data,ax = ax[0],x_jitter=.2, color = "g")
-
-    ax[1] = sns.regplot(x=col, y="Potential R", data=data,ax = ax[1],x_jitter=.2, color = "y")
-
-
-    ax[2] = sns.violinplot(x="Outcome", y=col,data=data, palette="muted",cut = 0,ax = ax[2])
-    ax[2]= sns.pointplot(x ="Outcome", y=col, data=data,join=False
-                         ,ci = None, estimator=np.mean,ax = ax[2],markers=["_", "_"]
-                         ,scale =2,color = "w",order = ["Winner","Loser"])
-    
-    
-    ax[3] = sns.distplot(a=data[[col]],bins = 20,ax = ax[3])
-    #ax[3].set_xticks(np.arange(0,20,2))
-
-    ax[3].set_ylabel('density')
-    ax[3] = ax[3].set_xlabel(col)
-    
 def disPlot(col,data):
+    
+    data1 = data.sort_values(by  = [col]).copy()
     sns.set_style("whitegrid")
-    f,axes=plt.subplots(1,3,figsize=(20,6))
+    f,axes=plt.subplots(1,3,figsize=(15,6))
     f.suptitle(col,fontsize=22)
-    g1 = sns.countplot(x=col,data=data,palette="muted",ax=axes[0])
+    g1 = sns.countplot(x=col,data=data1,ax=axes[0])
     f.subplots_adjust(hspace=0.2)
-    axes[0].tick_params(axis='x')
+    f.subplots_adjust(wspace=0.4)
+
 
 
     #plot 2
-    g3 =sns.boxplot(x=col, y="Exit R", data=data, palette="muted",ax=axes[1],showmeans=True)
 
-    axes[1].tick_params(axis='x')
     
-    g3 =sns.boxplot(x=col, y="Potential R", data=data, palette="muted",ax=axes[2],showmeans=True)
+    g2 =sns.boxplot(x=col, y="Potential R", data=data1,ax=axes[1],showmeans=True)
+    
+    if len(data1[col].unique())>=5:
+        for i in data1[col].values:
+            if len(i)>=6:
+                axes[0].tick_params(axis='x',labelrotation=75)
+                axes[1].tick_params(axis='x',labelrotation=75)
+                break
+                
+    #plot 3 
+    size = 0.5
+    
 
-    axes[2].tick_params(axis='x')
+    outer = data1[[col,'Num']].groupby(col).count().sort_index()
+    
+
+    inner = data1[[col,'Potential R bins','Num']].groupby([col,'Potential R bins']).count().sort_index()
+    x = data1[[col,'Potential R bins','Num']].groupby([col,'Potential R bins']).agg({'Potential R bins': 'sum'})
+    
+    x_pcts = inner.groupby(level=0).apply(lambda x:round(100 * x / float(x.sum()),2))
+
+    inner_percent = x_pcts['Num'].values
+
+    inner_percent = [str(x)+"%" for x in inner_percent]
+    colors  = ['lemonchiffon','khaki','gold','darkgoldenrod','chocolate','maroon']
+
+    
+    inner_labels = inner.index.get_level_values(1)
+
+    colors = colors[:len(inner_labels.unique())]
+    
+    axes[2].pie(outer.values.flatten(), radius=1.5,
+           labels=outer.index,
+           autopct='%1.1f%%',
+            pctdistance = 1.1,
+            labeldistance = 1.2,
+           wedgeprops=dict(width=0.5, edgecolor='w'))
+
+
+    ax2=axes[2].pie(inner.values.flatten(), radius=1.5-size, 
+            labels = inner_percent,
+            colors = colors,
+
+            labeldistance = 0.7,
+           wedgeprops=dict(width=0.7, edgecolor='w'))
+    axes[2].legend(ax2[0],inner_labels.unique(),loc = (1,1))
+
+    plt.show()
+        
+
+    
+    
+def regPlot(col,data):
+    
+    fig,ax = plt.subplots(1,3 ,figsize = (20,7))
+    fig.subplots_adjust(wspace=0.6)
+    fig.suptitle(col,fontsize = 22)
+
+
+    #ax[0] = sns.regplot(x=col, y="Exit R", data=data,ax = ax[0],x_jitter=.2, color = "g")
+
+    ax[0] = sns.regplot(x=col, y="Potential R", data=data,ax = ax[0],x_jitter=.2, color = "y")
+
+
+    #ax[2] = sns.violinplot(x="Outcome", y=col,data=data,cut = 0,ax = ax[2])
+    ax[1] = sns.barplot(x=col, y="Potential R bins", data=data,ax=ax[1])
+
+    
+    
+    ax[2] = sns.distplot(a=data[[col]],bins = 20,ax = ax[2])
+    #ax[3].set_xticks(np.arange(0,20,2))
+
+    ax[2].set_ylabel('density')
+    ax[2] = ax[2].set_xlabel(col)
